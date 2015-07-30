@@ -7,11 +7,14 @@
 //
 
 #import "MLCalendarView.h"
+
 #import "MLCalendarDayCellView.h"
+#import "MLScrollView.h"
+
 #import "MLDateUtils.h"
 
 
-@interface MLCalendarView () <NSTableViewDataSource, NSTableViewDelegate>
+@interface MLCalendarView () <NSTableViewDataSource, NSTableViewDelegate, MLScrollViewDelegate>
 {
     NSMutableArray *calendarArray;
     NSCalendar *calendar;
@@ -24,6 +27,8 @@
     IBOutlet NSTableView *calendarTableView;
     //The top left field that displays the month and year
     IBOutlet NSTextField *monthLabel;
+    
+    int swiped;
     
 }
 
@@ -106,6 +111,9 @@
     //Set current month
     [self setCurrentMonth:[MLDateUtils currentMonth] year:[MLDateUtils currentYear]];
     todayDate = [calendar components:(NSCalendarUnitDay | NSCalendarUnitMonth | NSCalendarUnitYear | NSCalendarUnitWeekday) fromDate:[NSDate date]];
+    
+    //Scroll View Delegate
+    [(MLScrollView *)calendarTableView.enclosingScrollView setDelegate:self];
     
     
     
@@ -267,6 +275,7 @@
     if (date.day == 1)
     {
         dayCellView.dayField.stringValue = [NSString stringWithFormat:@"%li", date.day];
+        dayCellView.monthField.hidden = NO;
         dayCellView.monthField.stringValue = [MLDateUtils monthName:date.month];
     }
     else
@@ -279,6 +288,11 @@
     {
         dayCellView.circleView.hidden = NO;
         dayCellView.dayField.textColor = [NSColor whiteColor];
+    }
+    else
+    {
+        dayCellView.circleView.hidden = YES;
+        dayCellView.dayField.textColor = [NSColor blackColor];
     }
     
     //dayCellView.dayField.stringValue = [NSString stringWithFormat:@"%li", [calendarArray[row][tableColumn.identifier.integerValue - 1 ] day]];
@@ -310,6 +324,54 @@
 -(IBAction)today:(id)sender
 {
     [self setCurrentMonth:todayDate.month year:todayDate.year];
+}
+
+#pragma mark MLScrollView Delegate Notifications
+
+-(void)scrollingDidEnd
+{
+    CGFloat currentY = calendarTableView.superview.bounds.origin.y;
+    
+    NSDateComponents *date = calendarArray[1][1];
+    
+    CGFloat ypos[3] = {0, 0, 0};
+    
+    ypos[0] = [self pointOfCalendarMonth:date.month].y;
+    
+    date = [MLDateUtils nextMonth:date];
+    
+    ypos[1] = [self pointOfCalendarMonth:date.month].y;
+    
+    date = [MLDateUtils nextMonth:date];
+    
+    ypos[2] = [self pointOfCalendarMonth:date.month].y;
+    
+    // NSLog (@"ypos: %f %f %f", ypos[0], ypos[1], ypos[2]);
+    
+    CGFloat difference[3] = {0, 0, 0};
+    
+    difference[0] = fabs((float)(currentY - ypos[0]));
+    difference[1] = fabs((float)(currentY - ypos[1]));
+    difference[2] = fabs((float)(currentY - ypos[2]));
+    
+    int minIndex = -1;
+    
+    if (difference[0] < difference[1])
+        minIndex = 0;
+    else
+        minIndex = 1;
+    
+    if (difference[2] < difference[minIndex])
+        minIndex = 2;
+    
+    //    NSLog (@"%i", calendarArray)
+    
+    //The conversion is just 1 more
+    swiped = minIndex - 1;
+    
+    
+    [self scrollToYPointAnimated:ypos[minIndex]];
+     
 }
 
 #pragma mark NSView Notifications
@@ -346,7 +408,7 @@
 {
     //Makes sure there is only one that is running and doesn't constantly take animated commands
     [NSAnimationContext beginGrouping];
-    /*
+    
     [[NSAnimationContext currentContext] setCompletionHandler:^{
         // This block will be invoked when all of the animations
         //  started below have completed or been cancelled.
@@ -354,17 +416,17 @@
         
         if (swiped < 0)
         {
-            NSDateComponents *dateComponents = [self previousMonth:currentMonth year:currentYear];
+            NSDateComponents *dateComponents = [MLDateUtils previousMonth:[MLDateUtils dateComponent:0 month:currentMonth year:currentYear]];
             [self setCurrentMonth:dateComponents.month year:dateComponents.year];
         }
         else if (swiped > 0)
         {
-            NSDateComponents *dateComponents = [self nextMonth:currentMonth year:currentYear];
+            NSDateComponents *dateComponents = [MLDateUtils nextMonth:[MLDateUtils dateComponent:0 month:currentMonth year:currentYear]];
             [self setCurrentMonth:dateComponents.month year:dateComponents.year];
         }
         
     }];
-    */
+    
  //   [(MLScrollView *)calendarTableView.enclosingScrollView setScrollingDisabled:YES];
     [[NSAnimationContext currentContext] setDuration:0.5];
     NSPoint newOrigin = [calendarTableView.superview bounds].origin;

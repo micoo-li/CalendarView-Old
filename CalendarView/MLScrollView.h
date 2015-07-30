@@ -8,6 +8,17 @@
 
 #import <Cocoa/Cocoa.h>
 
+@protocol MLScrollViewDelegate <NSObject>
+
+@optional
+
+-(void)scrollingDidStart;
+-(void)scrollingDidEnd;
+
+@end
+
 @interface MLScrollView : NSScrollView
+
+@property id<MLScrollViewDelegate> delegate;
 
 @end

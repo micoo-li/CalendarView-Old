@@ -32,7 +32,22 @@
 
 -(void)touchesBeganWithEvent:(NSEvent *)event
 {
-    
+    NSSet *touches = [event touchesMatchingPhase:NSTouchPhaseAny inView:self];
+    if (touches.count == 2)
+    {
+        if ([self.delegate respondsToSelector:@selector(scrollingDidStart)])
+            [self.delegate scrollingDidStart];
+    }
+}
+
+-(void)touchesEndedWithEvent:(NSEvent *)event
+{
+    NSSet *touches = [event touchesMatchingPhase:NSTouchPhaseAny inView:self];
+    if (touches.count == 2)
+    {
+        if ([self.delegate respondsToSelector:@selector(scrollingDidEnd)])
+            [self.delegate scrollingDidEnd];
+    }
 }
 
 @end
